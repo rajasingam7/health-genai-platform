@@ -161,7 +161,7 @@ elif mode == "Personalized Risk Prediction":
             "Level_of_Stress": stress,
             "avg_steps": steps
         }
-
+    with st.spinner("Calculating risk..."):
         risk, contributions = predict_bp_risk_with_explanation(input_data)
 
         log_event("PREDICTION", {
