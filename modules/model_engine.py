@@ -1,19 +1,15 @@
+import pandas as pd
 import joblib
 import shap
-import numpy as np
-
-MODEL_PATH = "models/bp_model.pkl"
-
-
-def load_model():
-    return joblib.load(MODEL_PATH)
 
 
 def predict_bp_risk_with_explanation(input_data: dict):
 
-    pipeline = load_model()
+    # Load trained pipeline
+    pipeline = joblib.load("models/bp_model.pkl")
 
-    feature_names = [
+    # Expected feature order (MUST match training script)
+    feature_order = [
         "Age",
         "BMI",
         "Level_of_Hemoglobin",
@@ -25,35 +21,19 @@ def predict_bp_risk_with_explanation(input_data: dict):
         "avg_steps"
     ]
 
-    # Prepare raw input
-    raw_features = np.array([[ 
-        input_data["Age"],
-        input_data["BMI"],
-        input_data["Level_of_Hemoglobin"],
-        input_data["Genetic_Pedigree_Coefficient"],
-        input_data["Smoking"],
-        input_data["salt_content_in_the_diet"],
-        input_data["alcohol_consumption_per_day"],
-        input_data["Level_of_Stress"],
-        input_data["avg_steps"]
-    ]])
+    # Convert input dictionary into DataFrame with correct order
+    raw_features = pd.DataFrame([input_data])[feature_order]
 
-    # Step 1: Predict using pipeline
+    # Predict probability
     probability = pipeline.predict_proba(raw_features)[0][1]
+    risk_percentage = round(probability * 100, 2)
 
-    # Step 2: Extract preprocessing steps
-    imputer = pipeline.named_steps["imputer"]
-    scaler = pipeline.named_steps["scaler"]
+    # SHAP explanation (tree-based model safe)
     model = pipeline.named_steps["model"]
+    explainer = shap.TreeExplainer(model)
 
-    # Step 3: Transform features manually
-    processed = imputer.transform(raw_features)
-    processed = scaler.transform(processed)
+    shap_values = explainer.shap_values(raw_features)
 
-    # Step 4: SHAP with final model
-    explainer = shap.LinearExplainer(model, processed)
-    shap_values = explainer(processed)
+    contributions = dict(zip(feature_order, shap_values[1][0]))
 
-    contributions = dict(zip(feature_names, shap_values.values[0]))
-
-    return round(probability * 100, 2), contributions
+    return risk_percentage, contributions
