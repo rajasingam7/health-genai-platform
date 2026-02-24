@@ -1,66 +1,56 @@
-import pandas as pd
 import streamlit as st
-import os
-
-DATASET_1_PATH = "data/Health Dataset 1.xlsm"
-DATASET_2_PATH = "data/Health Dataset 2.xlsm"
+import pandas as pd
 
 
 @st.cache_data
 def load_dataset_1():
     """
-    Load patient health profile dataset.
+    Load Health Dataset 1.
+    Cached to prevent reloading on every Streamlit rerun.
     """
-    if not os.path.exists(DATASET_1_PATH):
-        raise FileNotFoundError("Dataset 1 not found in data folder.")
-
-    df = pd.read_excel(DATASET_1_PATH, engine="openpyxl")
-    return df
+    df1 = pd.read_excel("data/Health Dataset 1.xlsm")
+    return df1
 
 
 @st.cache_data
 def load_dataset_2():
     """
-    Load physical activity dataset.
+    Load Health Dataset 2.
+    Cached to prevent reloading on every Streamlit rerun.
     """
-    if not os.path.exists(DATASET_2_PATH):
-        raise FileNotFoundError("Dataset 2 not found in data folder.")
-
-    df = pd.read_excel(DATASET_2_PATH, engine="openpyxl")
-    return df
+    df2 = pd.read_excel("data/Health Dataset 2.xlsm")
+    return df2
 
 
 def validate_schema(df1, df2):
-    required_df1_cols = [
+    """
+    Basic schema validation to ensure required columns exist.
+    """
+
+    required_columns_df1 = [
         "Patient_Number",
-        "Blood_Pressure_Abnormality",
-        "Level_of_Hemoglobin",
-        "Genetic_Pedigree_Coefficient",
         "Age",
         "BMI",
-        "Sex",
-        "Pregnancy",
+        "Level_of_Hemoglobin",
+        "Genetic_Pedigree_Coefficient",
         "Smoking",
         "salt_content_in_the_diet",
         "alcohol_consumption_per_day",
         "Level_of_Stress",
-        "Chronic_kidney_disease",
-        "Adrenal_and_thyroid_disorders",
+        "Blood_Pressure_Abnormality"
     ]
 
-    required_df2_cols = [
+    required_columns_df2 = [
         "Patient_Number",
-        "Day_Number",
-        "Physical_activity"
+        "Number_of_Steps"
     ]
 
-    missing_df1 = [col for col in required_df1_cols if col not in df1.columns]
-    missing_df2 = [col for col in required_df2_cols if col not in df2.columns]
+    for col in required_columns_df1:
+        if col not in df1.columns:
+            raise ValueError(f"Missing column in Dataset 1: {col}")
 
-    if missing_df1:
-        raise ValueError(f"Missing columns in Dataset 1: {missing_df1}")
-
-    if missing_df2:
-        raise ValueError(f"Missing columns in Dataset 2: {missing_df2}")
+    for col in required_columns_df2:
+        if col not in df2.columns:
+            raise ValueError(f"Missing column in Dataset 2: {col}")
 
     return True
