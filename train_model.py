@@ -1,13 +1,12 @@
-import pandas as pd
-import joblib
-import json
 import os
+import json
+import joblib
+import pandas as pd
 
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import StandardScaler
-from sklearn.impute import SimpleImputer
-from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, roc_auc_score
 
 from modules.data_loader import load_dataset_1, load_dataset_2
@@ -52,7 +51,7 @@ y = df["Blood_Pressure_Abnormality"]
 
 
 # ======================================================
-# STEP 3 — Train/Test Split (Enterprise Standard)
+# STEP 3 — Train/Test Split
 # ======================================================
 
 X_train, X_test, y_train, y_test = train_test_split(
@@ -60,37 +59,46 @@ X_train, X_test, y_train, y_test = train_test_split(
     y,
     test_size=0.2,
     random_state=42,
-    stratify=y  # preserves class distribution
+    stratify=y
 )
 
 print("Train/Test split complete.")
 
 
 # ======================================================
-# STEP 4 — Build Pipeline
+# STEP 4 — Preprocessing
 # ======================================================
 
-pipeline = Pipeline([
-    ("imputer", SimpleImputer(strategy="median")),
-    ("scaler", StandardScaler()),
-    ("model", RandomForestClassifier(
-        n_estimators=200,
-        max_depth=6,
-        random_state=42
-    ))
-])
+imputer = SimpleImputer(strategy="median")
+scaler = StandardScaler()
+
+X_train_imputed = imputer.fit_transform(X_train)
+X_train_scaled = scaler.fit_transform(X_train_imputed)
+
+X_test_imputed = imputer.transform(X_test)
+X_test_scaled = scaler.transform(X_test_imputed)
+
+
+# ======================================================
+# STEP 5 — Train Model
+# ======================================================
+
+model = RandomForestClassifier(
+    n_estimators=200,
+    max_depth=6,
+    random_state=42
+)
 
 print("Training model...")
-
-pipeline.fit(X_train, y_train)
+model.fit(X_train_scaled, y_train)
 
 
 # ======================================================
-# STEP 5 — Evaluate Model
+# STEP 6 — Evaluate Model
 # ======================================================
 
-preds = pipeline.predict(X_test)
-probs = pipeline.predict_proba(X_test)[:, 1]
+preds = model.predict(X_test_scaled)
+probs = model.predict_proba(X_test_scaled)[:, 1]
 
 accuracy = accuracy_score(y_test, preds)
 auc = roc_auc_score(y_test, probs)
@@ -101,16 +109,16 @@ print("AUC:", round(auc, 4))
 
 
 # ======================================================
-# STEP 6 — Save Model & Metrics
+# STEP 7 — Save Model Components
 # ======================================================
 
 if not os.path.exists("models"):
     os.makedirs("models")
 
-# Save trained model
-joblib.dump(pipeline, "models/bp_model.pkl")
+joblib.dump(model, "models/bp_model.pkl")
+joblib.dump(imputer, "models/imputer.pkl")
+joblib.dump(scaler, "models/scaler.pkl")
 
-# Save metrics
 metrics = {
     "accuracy": round(accuracy, 4),
     "auc": round(auc, 4)
@@ -119,5 +127,5 @@ metrics = {
 with open("models/model_metrics.json", "w") as f:
     json.dump(metrics, f, indent=2)
 
-print("Model and metrics saved successfully.")
+print("Model, preprocessing components, and metrics saved successfully.")
 print("Training pipeline completed.")

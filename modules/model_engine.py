@@ -5,10 +5,11 @@ import shap
 
 def predict_bp_risk_with_explanation(input_data: dict):
 
-    # Load trained pipeline
-    pipeline = joblib.load("models/bp_model.pkl")
+    # Load saved components
+    model = joblib.load("models/bp_model.pkl")
+    imputer = joblib.load("models/imputer.pkl")
+    scaler = joblib.load("models/scaler.pkl")
 
-    # Expected feature order (MUST match training script)
     feature_order = [
         "Age",
         "BMI",
@@ -21,18 +22,20 @@ def predict_bp_risk_with_explanation(input_data: dict):
         "avg_steps"
     ]
 
-    # Convert input dictionary into DataFrame with correct order
-    raw_features = pd.DataFrame([input_data])[feature_order]
+    # Create DataFrame in correct order
+    raw_df = pd.DataFrame([input_data])[feature_order]
+
+    # Apply preprocessing
+    imputed = imputer.transform(raw_df)
+    scaled = scaler.transform(imputed)
 
     # Predict probability
-    probability = pipeline.predict_proba(raw_features)[0][1]
+    probability = model.predict_proba(scaled)[0][1]
     risk_percentage = round(probability * 100, 2)
 
-    # SHAP explanation (tree-based model safe)
-    model = pipeline.named_steps["model"]
+    # SHAP explanation (Tree-based model)
     explainer = shap.TreeExplainer(model)
-
-    shap_values = explainer.shap_values(raw_features)
+    shap_values = explainer.shap_values(scaled)
 
     contributions = dict(zip(feature_order, shap_values[1][0]))
 

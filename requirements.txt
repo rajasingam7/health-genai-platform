@@ -9,3 +9,7 @@ matplotlib
 openpyxl
 shap
 python-dotenv
+scikit-learn==1.7.2
+pandas==2.2.2
+numpy==1.26.4
+shap==0.45.1
